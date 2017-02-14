@@ -1,10 +1,8 @@
 #ifndef CDDD_CQRS_TRAITS_H__
 #define CDDD_CQRS_TRAITS_H__
 
-#include "cqrs/artifact_traits.h"
-#include "cqrs/function_traits.h"
 #include "cqrs/pointer_traits.h"
-#include <type_traits>
+#include "utils/function_traits.h"
 
 
 namespace cddd {

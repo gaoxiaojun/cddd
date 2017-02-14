@@ -2,7 +2,7 @@
 #define CDDD_CQRS_FAKE_ARTIFACT_H__
 
 #include "cqrs/artifact.h"
-#include "cqrs/test/fakes/fake_event.h"
+#include "cqrs/fakes/fake_event.h"
 #include <gmock/gmock.h>
 
 namespace cddd {
@@ -15,8 +15,7 @@ public:
    explicit inline fake_artifact(std::shared_ptr<event_dispatcher> d) :
       artifact(d)
    {
-      add_handler<fake_event>(std::bind(&fake_artifact::on_fake_event, this,
-                              std::placeholders::_1));
+      add_handler([this](const fake_event &e) { on_fake_event(e); });
    }
    virtual ~fake_artifact() = default;
 

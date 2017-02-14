@@ -1,78 +1,89 @@
-#ifndef CDDD_CQRS_COMMIT_H__
-#define CDDD_CQRS_COMMIT_H__
+#pragma once
 
-#include "sequence.h"
-#include "cqrs/exceptions.h"
-#include "event_engine/clock.h"
+#include "utils/validation.h"
+#include <boost/date_time/posix_time/posix_time_types.hpp>
+#include <boost/uuid/nil_generator.hpp>
+#include <type_traits>
 
 namespace cddd {
 namespace cqrs {
 
-template<class T>
 class commit {
-public:
-   typedef cddd::event_engine::clock::time_point time_point;
-   typedef std::experimental::sequence<T> sequence_type;
+   // Create default constructor for noncommits only.
+   explicit inline commit() :
+      cid(boost::uuids::nil_uuid()),
+      sid(boost::uuids::nil_uuid()),
+      revision(0),
+      sequence(0),
+      ts()
+   {
+   }
 
-   explicit inline commit(object_id cid_, object_id sid_, std::size_t version, std::size_t seq,
-                          sequence_type values, time_point ts_) :
+public:
+   typedef boost::posix_time::ptime timestamp_type;
+
+   static inline commit noncommit() {
+      return commit{};
+   }
+
+   explicit inline commit(const boost::uuids::uuid &cid_, const boost::uuids::uuid &sid_,
+                          std::size_t version, std::size_t seq,
+                          timestamp_type ts_) noexcept(std::is_nothrow_copy_constructible<boost::uuids::uuid>::value &&
+				                       std::is_nothrow_copy_assignable<timestamp_type>::value) :
       cid(cid_),
       sid(sid_),
       revision(version),
       sequence(seq),
-      commit_values(std::move(values)),
-      ts(ts_) {
-      if (commit_id().is_null()) {
-         throw null_id_exception("commit id");
-      }
-      else if (stream_id().is_null()) {
-         throw null_id_exception("stream id");
-      }
-      else if (stream_revision() == 0) {
-         throw std::out_of_range("stream revision cannot be 0 (zero).");
+      ts(ts_)
+   {
+      utils::validate_id(commit_id());
+      utils::validate_id(stream_id());
+      if (stream_revision() == 0) {
+         throw std::out_of_range{"stream revision cannot be 0 (zero)."};
       }
       else if (commit_sequence() == 0) {
-         throw std::out_of_range("commit sequence cannot be 0 (zero).");
+         throw std::out_of_range{"commit sequence cannot be 0 (zero)."};
       }
-      else if (events().empty()) {
-         throw std::invalid_argument("events cannot be empty.");
+      else if (timestamp().is_not_a_date_time()) {
+         throw std::invalid_argument{"timestamp is invalid."};
       }
    }
 
-   inline const object_id &commit_id() const {
+   inline const boost::uuids::uuid &commit_id() const noexcept {
       return cid;
    }
 
-   inline const object_id &stream_id() const {
+   inline const boost::uuids::uuid &stream_id() const noexcept {
       return sid;
    }
 
-   inline std::size_t stream_revision() const {
+   inline std::size_t stream_revision() const noexcept {
       return revision;
    }
 
-   inline std::size_t commit_sequence() const {
+   inline std::size_t commit_sequence() const noexcept {
       return sequence;
    }
 
-   inline const event_sequence &events() const {
-      return commit_values;
-   }
-
-   inline time_point timestamp() const {
+   inline const timestamp_type &timestamp() const noexcept {
       return ts;
    }
 
+   inline bool is_noncommit() const noexcept {
+      return cid.is_nil() ||
+             sid.is_nil() ||
+             revision == 0 ||
+             sequence == 0 ||
+             ts.is_not_a_date_time();
+   }
+
 private:
-   object_id cid;
-   object_id sid;
+   boost::uuids::uuid cid;
+   boost::uuids::uuid sid;
    std::size_t revision;
    std::size_t sequence;
-   sequence_type commit_values;
-   time_point ts;
+   timestamp_type ts;
 };
 
 }
 }
-
-#endif

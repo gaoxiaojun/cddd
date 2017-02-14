@@ -10,6 +10,7 @@ template<class T, class Alloc=std::allocator<T>, class PointerTraits=shared_poin
 class simple_artifact_factory {
 public:
    typedef typename Alloc::template rebind<T>::other allocator_type;
+   typedef boost::uuids::uuid key_type;
    typedef typename PointerTraits::pointer pointer;
 
    explicit inline simple_artifact_factory(allocator_type alloc_=allocator_type{}) :
@@ -17,8 +18,8 @@ public:
    {
    }
 
-   pointer operator()(object_id id) const {
-      return PointerTraits::make_pointer(alloc, std::move(id));
+   pointer operator()(const key_type &id) const {
+      return PointerTraits::make_pointer(alloc, id);
    }
 
 private:
